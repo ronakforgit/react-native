@@ -141,7 +141,7 @@ pipeline:
                   spec:
                     connectorRef: ronakgcpbucket
                     bucket: migration-artifact-comman
-                    key: v5-yarn-cache-{{ test_js_prev_lts }}-{{ arch }}-{{ checksum "yarn.lock" }}
+                    key: v5-yarn-cache-test_js_prev_lts-{{ arch }}-{{ checksum "yarn.lock" }}
                     sourcePaths:
                       - /home/ubuntu/.cache/yarn
                     archiveFormat: Tar
