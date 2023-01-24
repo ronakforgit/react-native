@@ -394,7 +394,7 @@ pipeline:
                       identifier: env_setup
                       spec:
                         shell: Sh
-                        command: |-
+                        command: |
                           export CIRCLE_SHA1="c19548728c9be3ecc91e6fefb35bc14929109d60"
 
                           export GIT_COMMIT_DESC="git log --format=oneline -n 1 c19548728c9be3ecc91e6fefb35bc14929109d60"
@@ -406,6 +406,14 @@ pipeline:
                           export HOMEBREW_NO_AUTO_UPDATE=1
 
                           export KOTLIN_HOME="third-party/kotlin"
+
+
+                          #  image: reactnativecommunity/react-native-android:6.2
+
+                          export TERM="dumb"
+                          export ADB_INSTALL_TIMEOUT=10
+                          export GRADLE_OPTS='-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs="-XX:+HeapDumpOnOutOfMemoryError"'
+                          export BUILD_THREADS=2
                   - step:
                       type: Run
                       name: setup artifact
@@ -455,5 +463,64 @@ pipeline:
                         sourcePaths:
                           - /home/ubuntu/.cache/yarn
                         archiveFormat: Tar
+                  - step:
+                      type: Run
+                      name: Download Dependencies Using Buck
+                      identifier: Download_Dependencies_Using_Buck
+                      spec:
+                        shell: Sh
+                        command: ./scripts/circleci/buck_fetch.sh
+                  - step:
+                      type: Run
+                      name: Build Test React Native using Buck
+                      identifier: Build_Test_React_Native_using_Buck
+                      spec:
+                        shell: Sh
+                        command: |2-
+                                      buck build ReactAndroid/src/main/java/com/facebook/react
+                                      buck build ReactAndroid/src/main/java/com/facebook/react/shell
+                  - step:
+                      type: Run
+                      name: Run Tests - Android Unit Tests with Buck
+                      identifier: Run_Tests_Android_Unit_Tests_with_Buck
+                      spec:
+                        shell: Sh
+                        command: buck test ReactAndroid/src/test/... --config build.threads=$BUILD_THREADS --xml ./reports/buck/all-results-raw.xml
+                  - step:
+                      type: Run
+                      name: Build JavaScript Bundle for instrumentation tests
+                      identifier: Build_JavaScript_Bundle_for_instrumentation_tests
+                      spec:
+                        shell: Sh
+                        command: node cli.js bundle --max-workers 2 --platform android --dev true --entry-file ReactAndroid/src/androidTest/js/TestBundle.js --bundle-output ReactAndroid/src/androidTest/assets/AndroidTestBundle.js
+                  - step:
+                      type: Run
+                      name: Build Tests - Android Instrumentation Tests with Buck
+                      identifier: Build_Tests_Android_Instrumentation_Tests_with_Buck
+                      spec:
+                        shell: Sh
+                        command: |2
+                                      if [[ ! -e ReactAndroid/src/androidTest/assets/AndroidTestBundle.js ]]; then
+                                        echo "JavaScript bundle missing, cannot run instrumentation tests. Verify Build JavaScript Bundle step completed successfully."; exit 1;
+                                      fi
+                                      source scripts/android-setup.sh && NO_BUCKD=1 scripts/retry3 timeout 300 buck build ReactAndroid/src/androidTest/buck-runner:instrumentation-tests --config build.threads=$BUILD_THREADS
+                  - step:
+                      type: Run
+                      name: Collect test results
+                      identifier: Collect_test_results
+                      spec:
+                        shell: Sh
+                        command: |2-
+                                      find . -type f -regex ".*/build/test-results/debug/.*xml" -exec cp {} ./reports/build/ \;
+                                      find . -type f -regex ".*/outputs/androidTest-results/connected/.*xml" -exec cp {} ./reports/outputs/ \;
+                                      find . -type f -regex ".*/buck-out/gen/ReactAndroid/src/test/.*/.*xml" -exec cp {} ./reports/buck/ \;
+                                      if [ -f ~/react-native/reports/buck/all-results-raw.xml ]; then
+                                        ~/react-native/scripts/circleci/buckToJunit/buckToJunit.sh ~/react-native/reports/buck/all-results-raw.xml ~/react-native/reports/junit/results.xml
+                                      fi
+                        reports:
+                          type: JUnit
+                          spec:
+                            paths:
+                              - ./reports/junit/
               sharedPaths:
                 - /home/ubuntu/.cache/yarn
