@@ -445,12 +445,74 @@ pipeline:
                       name: install yarn
                       identifier: install_yarn
                       spec:
-                        shell: Bash
-                        command: |2-
+                        connectorRef: account.harnessImage
+                        image: reactnativecommunity/react-native-android:6.2
+                        shell: Sh
+                        command: |
+                          export CIRCLE_SHA1="c19548728c9be3ecc91e6fefb35bc14929109d60"
+
+                          export GIT_COMMIT_DESC="git log --format=oneline -n 1 c19548728c9be3ecc91e6fefb35bc14929109d60"
+                                # The public github tokens are publicly visible by design
+                          export PUBLIC_PULLBOT_GITHUB_TOKEN_A="a6edf8e8d40ce4e8b11a"
+                          export PUBLIC_PULLBOT_GITHUB_TOKEN_B="150e1341f4dd9c944d2a"
+                          export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_A="312d354b5c36f082cfe9"
+                          export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_B="07973d757026bdd9f196"
+                          export HOMEBREW_NO_AUTO_UPDATE=1
+
+                          export KOTLIN_HOME="third-party/kotlin"
+
+
+                          #  image: reactnativecommunity/react-native-android:6.2
+
+                          export TERM="dumb"
+                          export ADB_INSTALL_TIMEOUT=10
+                          export GRADLE_OPTS='-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs="-XX:+HeapDumpOnOutOfMemoryError"'
+                          export BUILD_THREADS=2
+
+
+
+
+
+
+
+                          mkdir -p ./reports/{buck,build,junit,outputs}
+
+
+
+
                                       # Skip yarn install on metro bump commits as the package is not yet
                                       # available on npm
                                       if [[ $(echo "$GIT_COMMIT_DESC" | grep -c "Bump metro@") -eq 0 ]]; then
                                         yarn install --non-interactive --cache-folder ~/.cache/yarn
+                                      fi
+
+
+
+                          ./scripts/circleci/buck_fetch.sh
+
+
+
+                                      buck build ReactAndroid/src/main/java/com/facebook/react
+                                      buck build ReactAndroid/src/main/java/com/facebook/react/shell
+
+
+                                      buck test ReactAndroid/src/test/... --config build.threads=$BUILD_THREADS --xml ./reports/buck/all-results-raw.xml
+
+                                      node cli.js bundle --max-workers 2 --platform android --dev true --entry-file ReactAndroid/src/androidTest/js/TestBundle.js --bundle-output ReactAndroid/src/androidTest/assets/AndroidTestBundle.js
+
+
+                                      if [[ ! -e ReactAndroid/src/androidTest/assets/AndroidTestBundle.js ]]; then
+                                        echo "JavaScript bundle missing, cannot run instrumentation tests. Verify Build JavaScript Bundle step completed successfully."; exit 1;
+                                      fi
+                                      source scripts/android-setup.sh && NO_BUCKD=1 scripts/retry3 timeout 300 buck build ReactAndroid/src/androidTest/buck-runner:instrumentation-tests --config build.threads=$BUILD_THREADS
+
+
+
+                                      find . -type f -regex ".*/build/test-results/debug/.*xml" -exec cp {} ./reports/build/ \;
+                                      find . -type f -regex ".*/outputs/androidTest-results/connected/.*xml" -exec cp {} ./reports/outputs/ \;
+                                      find . -type f -regex ".*/buck-out/gen/ReactAndroid/src/test/.*/.*xml" -exec cp {} ./reports/buck/ \;
+                                      if [ -f ~/react-native/reports/buck/all-results-raw.xml ]; then
+                                        ~/react-native/scripts/circleci/buckToJunit/buckToJunit.sh ~/react-native/reports/buck/all-results-raw.xml ~/react-native/reports/junit/results.xml
                                       fi
                   - step:
                       type: SaveCacheGCS
