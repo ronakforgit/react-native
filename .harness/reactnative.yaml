@@ -151,42 +151,43 @@ pipeline:
                   spec:
                     shell: Sh
                     command: " sudo apt update && sudo apt install rsync"
-              - step:
-                  type: Run
-                  name: Run Tests JavaScript Tests
-                  identifier: Run_Tests_JavaScript_Tests
-                  spec:
-                    shell: Sh
-                    command: node ./scripts/run-ci-javascript-tests.js --maxWorkers 2
-              - step:
-                  type: Run
-                  name: run_e2e-js
-                  identifier: run_e2ejs
-                  spec:
-                    shell: Sh
-                    command: |-
-                      node ./scripts/run-ci-e2e-tests.js --js --retries 3
-
-
-                      #   run_e2e:
-                      #     parameters:
-                      #       platform:
-                      #         description: Target platform
-                      #         type: enum
-                      #         enum: ["android", "ios", "js"]
-                      #         default: "js"
-                      #       retries:
-                      #         description: How many times the job should try to run these tests
-                      #         type: integer
-                      #         default: 3
-                      #     steps:
-                      #       - run:
-                      #           name: "Run Tests: << parameters.platform >> End-to-End Tests"
-                      #           command: node ./scripts/run-ci-e2e-tests.js --<< parameters.platform >> --retries << parameters.retries >>
-                    reports:
-                      type: JUnit
+              - parallel:
+                  - step:
+                      type: Run
+                      name: Run Tests JavaScript Tests
+                      identifier: Run_Tests_JavaScript_Tests
                       spec:
-                        paths:
-                          - ./reports/junit
+                        shell: Sh
+                        command: node ./scripts/run-ci-javascript-tests.js --maxWorkers 2
+                  - step:
+                      type: Run
+                      name: run_e2e-js
+                      identifier: run_e2ejs
+                      spec:
+                        shell: Sh
+                        command: |-
+                          node ./scripts/run-ci-e2e-tests.js --js --retries 3
+
+
+                          #   run_e2e:
+                          #     parameters:
+                          #       platform:
+                          #         description: Target platform
+                          #         type: enum
+                          #         enum: ["android", "ios", "js"]
+                          #         default: "js"
+                          #       retries:
+                          #         description: How many times the job should try to run these tests
+                          #         type: integer
+                          #         default: 3
+                          #     steps:
+                          #       - run:
+                          #           name: "Run Tests: << parameters.platform >> End-to-End Tests"
+                          #           command: node ./scripts/run-ci-e2e-tests.js --<< parameters.platform >> --retries << parameters.retries >>
+                        reports:
+                          type: JUnit
+                          spec:
+                            paths:
+                              - ./reports/junit
           sharedPaths:
             - /home/ubuntu/
