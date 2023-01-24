@@ -11,363 +11,367 @@ pipeline:
         repoName: ronakforgit/react-native
         build: <+input>
   stages:
-    - stage:
-        name: test_js_prev_lts
-        identifier: test_js_prev_lts
-        type: CI
-        spec:
-          cloneCodebase: true
-          platform:
-            os: Linux
-            arch: Amd64
-          runtime:
-            type: Cloud
-            spec: {}
-          execution:
-            steps:
-              - step:
-                  type: Run
-                  name: Executor-env-setup
-                  identifier: Executorenvsetup
-                  spec:
-                    shell: Bash
-                    command: |
-                      #   defaults: &defaults
-                      #     working_directory: ~/react-native
-                      #     environment:
-                      # export GIT_COMMIT_DESC: git log --format=oneline -n 1 $CIRCLE_SHA1
-                      #       # The public github tokens are publicly visible by design
-                      # export PUBLIC_PULLBOT_GITHUB_TOKEN_A: &github_pullbot_token_a "a6edf8e8d40ce4e8b11a"
-                      # export PUBLIC_PULLBOT_GITHUB_TOKEN_B: &github_pullbot_token_b "150e1341f4dd9c944d2a"
-                      # export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_A: &github_analysisbot_token_a "312d354b5c36f082cfe9"
-                      # export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_B: &github_analysisbot_token_b "07973d757026bdd9f196"
-                      #       # Homebrew currently breaks while updating:
-                      #       # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
-                      # export HOMEBREW_NO_AUTO_UPDATE: 1
-
-                      #   hermes_workspace_root: &hermes_workspace_root
-                      #     /tmp/hermes
-                      #   hermes_tarball_artifacts_dir: &hermes_tarball_artifacts_dir
-                      #     /tmp/hermes/hermes-runtime-darwin
-                      #   hermes_osxbin_artifacts_dir: &hermes_osxbin_artifacts_dir
-                      #     /tmp/hermes/osx-bin
-                      #   attach_hermes_workspace: &attach_hermes_workspace
-                      #     attach_workspace:
-                      #       at: *hermes_workspace_root
-
-
-                      # Using build environment variables:
-                      #   BASH_ENV=/tmp/.bash_env-63cee8a9138ca21a6f8c5b40-0-build
-                      #   CI=true
-                      #   CIRCLECI=true
-                      #   CIRCLE_BRANCH=main
-                      #   CIRCLE_BUILD_NUM=420022
-                      #   CIRCLE_BUILD_URL=https://circleci.com/gh/facebook/react-native/420022
-                      #   CIRCLE_JOB=test_windows
-                      #   CIRCLE_NODE_INDEX=0
-                      #   CIRCLE_NODE_TOTAL=1
-                      #   CIRCLE_PROJECT_REPONAME=react-native
-                      #   CIRCLE_PROJECT_USERNAME=facebook
-                      #   CIRCLE_REPOSITORY_URL=git@github.com:facebook/react-native.git
-                      #   CIRCLE_SHELL_ENV=/tmp/.bash_env-63cee8a9138ca21a6f8c5b40-0-build
-                      #   CIRCLE_USERNAME=facebook-github-bot
-                      #   CIRCLE_WORKFLOW_ID=8b5f7a71-08f5-412f-85d5-d82d0db479e3
-                      #   CIRCLE_WORKFLOW_JOB_ID=5f2f4d46-b48c-4bf9-9bd4-309b0b9862e1
-                      #   CIRCLE_WORKFLOW_WORKSPACE_ID=8b5f7a71-08f5-412f-85d5-d82d0db479e3
-                      #   CIRCLE_WORKING_DIRECTORY=C:\Users\circleci\project
-
-                      # Using environment variables from project settings and/or contexts:
-                      #   CIRCLE_NPM_TOKEN=**REDACTED**
-                      #   COVERALLS_REPO_TOKEN=**REDACTED**
-                      #   COVERALLS_SERVICE_NAME=**REDACTED**
-                      #   FIREBASE_APP_EMAIL=**REDACTED**
-                      #   FIREBASE_APP_PASS=**REDACTED**
-                      #   ORG_GRADLE_PROJECT_SIGNING_KEY_ENCODED=**REDACTED**
-                      #   ORG_GRADLE_PROJECT_SIGNING_PWD=**REDACTED**
-                      #   ORG_GRADLE_PROJECT_SONATYPE_PASSWORD=**REDACTED**
-                      #   ORG_GRADLE_PROJECT_SONATYPE_USERNAME=**REDACTED**
-                      #   REACT_NATIVE_BOT_GITHUB_TOKEN=**REDACTED**
-
-                      # The redacted variables listed above will be masked in run step output.
-
-
-                      export CIRCLE_SHA1="c19548728c9be3ecc91e6fefb35bc14929109d60"
-
-                      export GIT_COMMIT_DESC="git log --format=oneline -n 1 c19548728c9be3ecc91e6fefb35bc14929109d60 "
-                            # The public github tokens are publicly visible by design
-                      export PUBLIC_PULLBOT_GITHUB_TOKEN_A="a6edf8e8d40ce4e8b11a"
-                      export PUBLIC_PULLBOT_GITHUB_TOKEN_B="150e1341f4dd9c944d2a"
-                      export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_A="312d354b5c36f082cfe9"
-                      export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_B="07973d757026bdd9f196"
-                      export HOMEBREW_NO_AUTO_UPDATE=1
-              - step:
-                  type: Run
-                  name: setup artifact
-                  identifier: setup_artifact
-                  spec:
-                    shell: Bash
-                    command: |-
-                      #intial setup
-                      mkdir -p ./reports/{buck,build,junit,outputs}
-              - step:
-                  type: RestoreCacheGCS
-                  name: "restore yarn cache "
-                  identifier: restore_yarn_cache
-                  spec:
-                    connectorRef: ronakgcpbucket
-                    bucket: migration-artifact-comman
-                    key: v5-yarn-cache-test_js_prev_lts-{{ arch }}-{{ checksum "yarn.lock" }}
-                    archiveFormat: Tar
-                  when:
-                    stageStatus: Success
-                  failureStrategies: []
-              - step:
-                  type: Run
-                  name: install yarn
-                  identifier: install_yarn
-                  spec:
-                    shell: Bash
-                    command: |2-
-                                  # Skip yarn install on metro bump commits as the package is not yet
-                                  # available on npm
-                                  if [[ $(echo "$GIT_COMMIT_DESC" | grep -c "Bump metro@") -eq 0 ]]; then
-                                    yarn install --non-interactive --cache-folder ~/.cache/yarn
-                                  fi
-              - step:
-                  type: SaveCacheGCS
-                  name: save yarn cache
-                  identifier: save_yarn_cache
-                  spec:
-                    connectorRef: ronakgcpbucket
-                    bucket: migration-artifact-comman
-                    key: v5-yarn-cache-test_js_prev_lts-{{ arch }}-{{ checksum "yarn.lock" }}
-                    sourcePaths:
-                      - /home/ubuntu/.cache/yarn
-                    archiveFormat: Tar
-              - step:
-                  type: Run
-                  name: Install rsync
-                  identifier: Install_rsync
-                  spec:
-                    shell: Sh
-                    command: " sudo apt update && sudo apt install rsync"
-              - parallel:
+    - parallel:
+        - stage:
+            name: test_js_prev_lts
+            identifier: test_js_prev_lts
+            type: CI
+            spec:
+              cloneCodebase: true
+              platform:
+                os: Linux
+                arch: Amd64
+              runtime:
+                type: Cloud
+                spec: {}
+              execution:
+                steps:
                   - step:
                       type: Run
-                      name: Run Tests JavaScript Tests
-                      identifier: Run_Tests_JavaScript_Tests
+                      name: Executor-env-setup
+                      identifier: Executorenvsetup
                       spec:
-                        shell: Sh
-                        command: node ./scripts/run-ci-javascript-tests.js --maxWorkers 2
+                        shell: Bash
+                        command: |
+                          #   defaults: &defaults
+                          #     working_directory: ~/react-native
+                          #     environment:
+                          # export GIT_COMMIT_DESC: git log --format=oneline -n 1 $CIRCLE_SHA1
+                          #       # The public github tokens are publicly visible by design
+                          # export PUBLIC_PULLBOT_GITHUB_TOKEN_A: &github_pullbot_token_a "a6edf8e8d40ce4e8b11a"
+                          # export PUBLIC_PULLBOT_GITHUB_TOKEN_B: &github_pullbot_token_b "150e1341f4dd9c944d2a"
+                          # export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_A: &github_analysisbot_token_a "312d354b5c36f082cfe9"
+                          # export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_B: &github_analysisbot_token_b "07973d757026bdd9f196"
+                          #       # Homebrew currently breaks while updating:
+                          #       # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+                          # export HOMEBREW_NO_AUTO_UPDATE: 1
+
+                          #   hermes_workspace_root: &hermes_workspace_root
+                          #     /tmp/hermes
+                          #   hermes_tarball_artifacts_dir: &hermes_tarball_artifacts_dir
+                          #     /tmp/hermes/hermes-runtime-darwin
+                          #   hermes_osxbin_artifacts_dir: &hermes_osxbin_artifacts_dir
+                          #     /tmp/hermes/osx-bin
+                          #   attach_hermes_workspace: &attach_hermes_workspace
+                          #     attach_workspace:
+                          #       at: *hermes_workspace_root
+
+
+                          # Using build environment variables:
+                          #   BASH_ENV=/tmp/.bash_env-63cee8a9138ca21a6f8c5b40-0-build
+                          #   CI=true
+                          #   CIRCLECI=true
+                          #   CIRCLE_BRANCH=main
+                          #   CIRCLE_BUILD_NUM=420022
+                          #   CIRCLE_BUILD_URL=https://circleci.com/gh/facebook/react-native/420022
+                          #   CIRCLE_JOB=test_windows
+                          #   CIRCLE_NODE_INDEX=0
+                          #   CIRCLE_NODE_TOTAL=1
+                          #   CIRCLE_PROJECT_REPONAME=react-native
+                          #   CIRCLE_PROJECT_USERNAME=facebook
+                          #   CIRCLE_REPOSITORY_URL=git@github.com:facebook/react-native.git
+                          #   CIRCLE_SHELL_ENV=/tmp/.bash_env-63cee8a9138ca21a6f8c5b40-0-build
+                          #   CIRCLE_USERNAME=facebook-github-bot
+                          #   CIRCLE_WORKFLOW_ID=8b5f7a71-08f5-412f-85d5-d82d0db479e3
+                          #   CIRCLE_WORKFLOW_JOB_ID=5f2f4d46-b48c-4bf9-9bd4-309b0b9862e1
+                          #   CIRCLE_WORKFLOW_WORKSPACE_ID=8b5f7a71-08f5-412f-85d5-d82d0db479e3
+                          #   CIRCLE_WORKING_DIRECTORY=C:\Users\circleci\project
+
+                          # Using environment variables from project settings and/or contexts:
+                          #   CIRCLE_NPM_TOKEN=**REDACTED**
+                          #   COVERALLS_REPO_TOKEN=**REDACTED**
+                          #   COVERALLS_SERVICE_NAME=**REDACTED**
+                          #   FIREBASE_APP_EMAIL=**REDACTED**
+                          #   FIREBASE_APP_PASS=**REDACTED**
+                          #   ORG_GRADLE_PROJECT_SIGNING_KEY_ENCODED=**REDACTED**
+                          #   ORG_GRADLE_PROJECT_SIGNING_PWD=**REDACTED**
+                          #   ORG_GRADLE_PROJECT_SONATYPE_PASSWORD=**REDACTED**
+                          #   ORG_GRADLE_PROJECT_SONATYPE_USERNAME=**REDACTED**
+                          #   REACT_NATIVE_BOT_GITHUB_TOKEN=**REDACTED**
+
+                          # The redacted variables listed above will be masked in run step output.
+
+
+                          export CIRCLE_SHA1="c19548728c9be3ecc91e6fefb35bc14929109d60"
+
+                          export GIT_COMMIT_DESC="git log --format=oneline -n 1 c19548728c9be3ecc91e6fefb35bc14929109d60 "
+                                # The public github tokens are publicly visible by design
+                          export PUBLIC_PULLBOT_GITHUB_TOKEN_A="a6edf8e8d40ce4e8b11a"
+                          export PUBLIC_PULLBOT_GITHUB_TOKEN_B="150e1341f4dd9c944d2a"
+                          export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_A="312d354b5c36f082cfe9"
+                          export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_B="07973d757026bdd9f196"
+                          export HOMEBREW_NO_AUTO_UPDATE=1
                   - step:
                       type: Run
-                      name: run_e2e-js
-                      identifier: run_e2ejs
+                      name: setup artifact
+                      identifier: setup_artifact
                       spec:
-                        shell: Sh
+                        shell: Bash
                         command: |-
-                          node ./scripts/run-ci-e2e-tests.js --js --retries 3
-
-
-                          #   run_e2e:
-                          #     parameters:
-                          #       platform:
-                          #         description: Target platform
-                          #         type: enum
-                          #         enum: ["android", "ios", "js"]
-                          #         default: "js"
-                          #       retries:
-                          #         description: How many times the job should try to run these tests
-                          #         type: integer
-                          #         default: 3
-                          #     steps:
-                          #       - run:
-                          #           name: "Run Tests: << parameters.platform >> End-to-End Tests"
-                          #           command: node ./scripts/run-ci-e2e-tests.js --<< parameters.platform >> --retries << parameters.retries >>
-                        reports:
-                          type: JUnit
+                          #intial setup
+                          mkdir -p ./reports/{buck,build,junit,outputs}
+                  - step:
+                      type: RestoreCacheGCS
+                      name: "restore yarn cache "
+                      identifier: restore_yarn_cache
+                      spec:
+                        connectorRef: ronakgcpbucket
+                        bucket: migration-artifact-comman
+                        key: v5-yarn-cache-test_js_prev_lts-{{ arch }}-{{ checksum "yarn.lock" }}
+                        archiveFormat: Tar
+                      when:
+                        stageStatus: Success
+                      failureStrategies: []
+                  - step:
+                      type: Run
+                      name: install yarn
+                      identifier: install_yarn
+                      spec:
+                        shell: Bash
+                        command: |2-
+                                      # Skip yarn install on metro bump commits as the package is not yet
+                                      # available on npm
+                                      if [[ $(echo "$GIT_COMMIT_DESC" | grep -c "Bump metro@") -eq 0 ]]; then
+                                        yarn install --non-interactive --cache-folder ~/.cache/yarn
+                                      fi
+                  - step:
+                      type: SaveCacheGCS
+                      name: save yarn cache
+                      identifier: save_yarn_cache
+                      spec:
+                        connectorRef: ronakgcpbucket
+                        bucket: migration-artifact-comman
+                        key: v5-yarn-cache-test_js_prev_lts-{{ arch }}-{{ checksum "yarn.lock" }}
+                        sourcePaths:
+                          - /home/ubuntu/.cache/yarn
+                        archiveFormat: Tar
+                  - step:
+                      type: Run
+                      name: Install rsync
+                      identifier: Install_rsync
+                      spec:
+                        shell: Sh
+                        command: " sudo apt update && sudo apt install rsync"
+                  - parallel:
+                      - step:
+                          type: Run
+                          name: Run Tests JavaScript Tests
+                          identifier: Run_Tests_JavaScript_Tests
                           spec:
-                            paths:
-                              - ./reports/junit
-          sharedPaths:
-            - /home/ubuntu/
-    - stage:
-        name: "test js "
-        identifier: test_js_prev_ltsc
-        type: CI
-        spec:
-          cloneCodebase: true
-          platform:
-            os: Linux
-            arch: Amd64
-          runtime:
-            type: Cloud
-            spec: {}
-          execution:
-            steps:
-              - step:
-                  type: Run
-                  name: Executor-env-setup
-                  identifier: Executorenvsetup
-                  spec:
-                    shell: Bash
-                    command: |
-                      #   defaults: &defaults
-                      #     working_directory: ~/react-native
-                      #     environment:
-                      # export GIT_COMMIT_DESC: git log --format=oneline -n 1 $CIRCLE_SHA1
-                      #       # The public github tokens are publicly visible by design
-                      # export PUBLIC_PULLBOT_GITHUB_TOKEN_A: &github_pullbot_token_a "a6edf8e8d40ce4e8b11a"
-                      # export PUBLIC_PULLBOT_GITHUB_TOKEN_B: &github_pullbot_token_b "150e1341f4dd9c944d2a"
-                      # export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_A: &github_analysisbot_token_a "312d354b5c36f082cfe9"
-                      # export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_B: &github_analysisbot_token_b "07973d757026bdd9f196"
-                      #       # Homebrew currently breaks while updating:
-                      #       # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
-                      # export HOMEBREW_NO_AUTO_UPDATE: 1
-
-                      #   hermes_workspace_root: &hermes_workspace_root
-                      #     /tmp/hermes
-                      #   hermes_tarball_artifacts_dir: &hermes_tarball_artifacts_dir
-                      #     /tmp/hermes/hermes-runtime-darwin
-                      #   hermes_osxbin_artifacts_dir: &hermes_osxbin_artifacts_dir
-                      #     /tmp/hermes/osx-bin
-                      #   attach_hermes_workspace: &attach_hermes_workspace
-                      #     attach_workspace:
-                      #       at: *hermes_workspace_root
+                            shell: Sh
+                            command: node ./scripts/run-ci-javascript-tests.js --maxWorkers 2
+                      - step:
+                          type: Run
+                          name: run_e2e-js
+                          identifier: run_e2ejs
+                          spec:
+                            shell: Sh
+                            command: |-
+                              node ./scripts/run-ci-e2e-tests.js --js --retries 3
 
 
-                      # Using build environment variables:
-                      #   BASH_ENV=/tmp/.bash_env-63cee8a9138ca21a6f8c5b40-0-build
-                      #   CI=true
-                      #   CIRCLECI=true
-                      #   CIRCLE_BRANCH=main
-                      #   CIRCLE_BUILD_NUM=420022
-                      #   CIRCLE_BUILD_URL=https://circleci.com/gh/facebook/react-native/420022
-                      #   CIRCLE_JOB=test_windows
-                      #   CIRCLE_NODE_INDEX=0
-                      #   CIRCLE_NODE_TOTAL=1
-                      #   CIRCLE_PROJECT_REPONAME=react-native
-                      #   CIRCLE_PROJECT_USERNAME=facebook
-                      #   CIRCLE_REPOSITORY_URL=git@github.com:facebook/react-native.git
-                      #   CIRCLE_SHELL_ENV=/tmp/.bash_env-63cee8a9138ca21a6f8c5b40-0-build
-                      #   CIRCLE_USERNAME=facebook-github-bot
-                      #   CIRCLE_WORKFLOW_ID=8b5f7a71-08f5-412f-85d5-d82d0db479e3
-                      #   CIRCLE_WORKFLOW_JOB_ID=5f2f4d46-b48c-4bf9-9bd4-309b0b9862e1
-                      #   CIRCLE_WORKFLOW_WORKSPACE_ID=8b5f7a71-08f5-412f-85d5-d82d0db479e3
-                      #   CIRCLE_WORKING_DIRECTORY=C:\Users\circleci\project
-
-                      # Using environment variables from project settings and/or contexts:
-                      #   CIRCLE_NPM_TOKEN=**REDACTED**
-                      #   COVERALLS_REPO_TOKEN=**REDACTED**
-                      #   COVERALLS_SERVICE_NAME=**REDACTED**
-                      #   FIREBASE_APP_EMAIL=**REDACTED**
-                      #   FIREBASE_APP_PASS=**REDACTED**
-                      #   ORG_GRADLE_PROJECT_SIGNING_KEY_ENCODED=**REDACTED**
-                      #   ORG_GRADLE_PROJECT_SIGNING_PWD=**REDACTED**
-                      #   ORG_GRADLE_PROJECT_SONATYPE_PASSWORD=**REDACTED**
-                      #   ORG_GRADLE_PROJECT_SONATYPE_USERNAME=**REDACTED**
-                      #   REACT_NATIVE_BOT_GITHUB_TOKEN=**REDACTED**
-
-                      # The redacted variables listed above will be masked in run step output.
-
-
-                      export CIRCLE_SHA1="c19548728c9be3ecc91e6fefb35bc14929109d60"
-
-                      export GIT_COMMIT_DESC="git log --format=oneline -n 1 c19548728c9be3ecc91e6fefb35bc14929109d60 "
-                            # The public github tokens are publicly visible by design
-                      export PUBLIC_PULLBOT_GITHUB_TOKEN_A="a6edf8e8d40ce4e8b11a"
-                      export PUBLIC_PULLBOT_GITHUB_TOKEN_B="150e1341f4dd9c944d2a"
-                      export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_A="312d354b5c36f082cfe9"
-                      export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_B="07973d757026bdd9f196"
-                      export HOMEBREW_NO_AUTO_UPDATE=1
-              - step:
-                  type: Run
-                  name: setup artifact
-                  identifier: setup_artifact
-                  spec:
-                    shell: Bash
-                    command: |-
-                      #intial setup
-                      mkdir -p ./reports/{buck,build,junit,outputs}
-              - step:
-                  type: RestoreCacheGCS
-                  name: "restore yarn cache "
-                  identifier: restore_yarn_cache
-                  spec:
-                    connectorRef: ronakgcpbucket
-                    bucket: migration-artifact-comman
-                    key: v5-yarn-cache-test_js_prev_lts-{{ arch }}-{{ checksum "yarn.lock" }}
-                    archiveFormat: Tar
-                  when:
-                    stageStatus: Success
-                  failureStrategies: []
-              - step:
-                  type: Run
-                  name: install yarn
-                  identifier: install_yarn
-                  spec:
-                    shell: Bash
-                    command: |2-
-                                  # Skip yarn install on metro bump commits as the package is not yet
-                                  # available on npm
-                                  if [[ $(echo "$GIT_COMMIT_DESC" | grep -c "Bump metro@") -eq 0 ]]; then
-                                    yarn install --non-interactive --cache-folder ~/.cache/yarn
-                                  fi
-              - step:
-                  type: SaveCacheGCS
-                  name: save yarn cache
-                  identifier: save_yarn_cache
-                  spec:
-                    connectorRef: ronakgcpbucket
-                    bucket: migration-artifact-comman
-                    key: v5-yarn-cache-test_js_prev_lts-{{ arch }}-{{ checksum "yarn.lock" }}
-                    sourcePaths:
-                      - /home/ubuntu/.cache/yarn
-                    archiveFormat: Tar
-              - step:
-                  type: Run
-                  name: Install rsync
-                  identifier: Install_rsync
-                  spec:
-                    shell: Sh
-                    command: " sudo apt update && sudo apt install rsync"
-              - parallel:
+                              #   run_e2e:
+                              #     parameters:
+                              #       platform:
+                              #         description: Target platform
+                              #         type: enum
+                              #         enum: ["android", "ios", "js"]
+                              #         default: "js"
+                              #       retries:
+                              #         description: How many times the job should try to run these tests
+                              #         type: integer
+                              #         default: 3
+                              #     steps:
+                              #       - run:
+                              #           name: "Run Tests: << parameters.platform >> End-to-End Tests"
+                              #           command: node ./scripts/run-ci-e2e-tests.js --<< parameters.platform >> --retries << parameters.retries >>
+                            reports:
+                              type: JUnit
+                              spec:
+                                paths:
+                                  - ./reports/junit
+              sharedPaths:
+                - /home/ubuntu/
+        - stage:
+            name: "test js "
+            identifier: test_js_prev_ltsc
+            type: CI
+            spec:
+              cloneCodebase: true
+              platform:
+                os: Linux
+                arch: Amd64
+              runtime:
+                type: Cloud
+                spec: {}
+              execution:
+                steps:
                   - step:
                       type: Run
-                      name: Run Tests JavaScript Tests
-                      identifier: Run_Tests_JavaScript_Tests
+                      name: Executor-env-setup
+                      identifier: Executorenvsetup
                       spec:
-                        shell: Sh
-                        command: node ./scripts/run-ci-javascript-tests.js --maxWorkers 2
+                        shell: Bash
+                        command: |
+                          #   defaults: &defaults
+                          #     working_directory: ~/react-native
+                          #     environment:
+                          # export GIT_COMMIT_DESC: git log --format=oneline -n 1 $CIRCLE_SHA1
+                          #       # The public github tokens are publicly visible by design
+                          # export PUBLIC_PULLBOT_GITHUB_TOKEN_A: &github_pullbot_token_a "a6edf8e8d40ce4e8b11a"
+                          # export PUBLIC_PULLBOT_GITHUB_TOKEN_B: &github_pullbot_token_b "150e1341f4dd9c944d2a"
+                          # export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_A: &github_analysisbot_token_a "312d354b5c36f082cfe9"
+                          # export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_B: &github_analysisbot_token_b "07973d757026bdd9f196"
+                          #       # Homebrew currently breaks while updating:
+                          #       # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+                          # export HOMEBREW_NO_AUTO_UPDATE: 1
+
+                          #   hermes_workspace_root: &hermes_workspace_root
+                          #     /tmp/hermes
+                          #   hermes_tarball_artifacts_dir: &hermes_tarball_artifacts_dir
+                          #     /tmp/hermes/hermes-runtime-darwin
+                          #   hermes_osxbin_artifacts_dir: &hermes_osxbin_artifacts_dir
+                          #     /tmp/hermes/osx-bin
+                          #   attach_hermes_workspace: &attach_hermes_workspace
+                          #     attach_workspace:
+                          #       at: *hermes_workspace_root
+
+
+                          # Using build environment variables:
+                          #   BASH_ENV=/tmp/.bash_env-63cee8a9138ca21a6f8c5b40-0-build
+                          #   CI=true
+                          #   CIRCLECI=true
+                          #   CIRCLE_BRANCH=main
+                          #   CIRCLE_BUILD_NUM=420022
+                          #   CIRCLE_BUILD_URL=https://circleci.com/gh/facebook/react-native/420022
+                          #   CIRCLE_JOB=test_windows
+                          #   CIRCLE_NODE_INDEX=0
+                          #   CIRCLE_NODE_TOTAL=1
+                          #   CIRCLE_PROJECT_REPONAME=react-native
+                          #   CIRCLE_PROJECT_USERNAME=facebook
+                          #   CIRCLE_REPOSITORY_URL=git@github.com:facebook/react-native.git
+                          #   CIRCLE_SHELL_ENV=/tmp/.bash_env-63cee8a9138ca21a6f8c5b40-0-build
+                          #   CIRCLE_USERNAME=facebook-github-bot
+                          #   CIRCLE_WORKFLOW_ID=8b5f7a71-08f5-412f-85d5-d82d0db479e3
+                          #   CIRCLE_WORKFLOW_JOB_ID=5f2f4d46-b48c-4bf9-9bd4-309b0b9862e1
+                          #   CIRCLE_WORKFLOW_WORKSPACE_ID=8b5f7a71-08f5-412f-85d5-d82d0db479e3
+                          #   CIRCLE_WORKING_DIRECTORY=C:\Users\circleci\project
+
+                          # Using environment variables from project settings and/or contexts:
+                          #   CIRCLE_NPM_TOKEN=**REDACTED**
+                          #   COVERALLS_REPO_TOKEN=**REDACTED**
+                          #   COVERALLS_SERVICE_NAME=**REDACTED**
+                          #   FIREBASE_APP_EMAIL=**REDACTED**
+                          #   FIREBASE_APP_PASS=**REDACTED**
+                          #   ORG_GRADLE_PROJECT_SIGNING_KEY_ENCODED=**REDACTED**
+                          #   ORG_GRADLE_PROJECT_SIGNING_PWD=**REDACTED**
+                          #   ORG_GRADLE_PROJECT_SONATYPE_PASSWORD=**REDACTED**
+                          #   ORG_GRADLE_PROJECT_SONATYPE_USERNAME=**REDACTED**
+                          #   REACT_NATIVE_BOT_GITHUB_TOKEN=**REDACTED**
+
+                          # The redacted variables listed above will be masked in run step output.
+
+
+                          export CIRCLE_SHA1="c19548728c9be3ecc91e6fefb35bc14929109d60"
+
+                          export GIT_COMMIT_DESC="git log --format=oneline -n 1 c19548728c9be3ecc91e6fefb35bc14929109d60 "
+                                # The public github tokens are publicly visible by design
+                          export PUBLIC_PULLBOT_GITHUB_TOKEN_A="a6edf8e8d40ce4e8b11a"
+                          export PUBLIC_PULLBOT_GITHUB_TOKEN_B="150e1341f4dd9c944d2a"
+                          export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_A="312d354b5c36f082cfe9"
+                          export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_B="07973d757026bdd9f196"
+                          export HOMEBREW_NO_AUTO_UPDATE=1
                   - step:
                       type: Run
-                      name: run_e2e-js
-                      identifier: run_e2ejs
+                      name: setup artifact
+                      identifier: setup_artifact
                       spec:
-                        shell: Sh
+                        shell: Bash
                         command: |-
-                          node ./scripts/run-ci-e2e-tests.js --js --retries 3
-
-
-                          #   run_e2e:
-                          #     parameters:
-                          #       platform:
-                          #         description: Target platform
-                          #         type: enum
-                          #         enum: ["android", "ios", "js"]
-                          #         default: "js"
-                          #       retries:
-                          #         description: How many times the job should try to run these tests
-                          #         type: integer
-                          #         default: 3
-                          #     steps:
-                          #       - run:
-                          #           name: "Run Tests: << parameters.platform >> End-to-End Tests"
-                          #           command: node ./scripts/run-ci-e2e-tests.js --<< parameters.platform >> --retries << parameters.retries >>
-                        reports:
-                          type: JUnit
+                          #intial setup
+                          mkdir -p ./reports/{buck,build,junit,outputs}
+                  - step:
+                      type: RestoreCacheGCS
+                      name: "restore yarn cache "
+                      identifier: restore_yarn_cache
+                      spec:
+                        connectorRef: ronakgcpbucket
+                        bucket: migration-artifact-comman
+                        key: v5-yarn-cache-test_js_prev_lts-{{ arch }}-{{ checksum "yarn.lock" }}
+                        archiveFormat: Tar
+                      when:
+                        stageStatus: Success
+                      failureStrategies: []
+                  - step:
+                      type: Run
+                      name: install yarn
+                      identifier: install_yarn
+                      spec:
+                        shell: Bash
+                        command: |2-
+                                      # Skip yarn install on metro bump commits as the package is not yet
+                                      # available on npm
+                                      if [[ $(echo "$GIT_COMMIT_DESC" | grep -c "Bump metro@") -eq 0 ]]; then
+                                        yarn install --non-interactive --cache-folder ~/.cache/yarn
+                                      fi
+                  - step:
+                      type: SaveCacheGCS
+                      name: save yarn cache
+                      identifier: save_yarn_cache
+                      spec:
+                        connectorRef: ronakgcpbucket
+                        bucket: migration-artifact-comman
+                        key: v5-yarn-cache-test_js_prev_lts-{{ arch }}-{{ checksum "yarn.lock" }}
+                        sourcePaths:
+                          - /home/ubuntu/.cache/yarn
+                        archiveFormat: Tar
+                  - step:
+                      type: Run
+                      name: Install rsync
+                      identifier: Install_rsync
+                      spec:
+                        shell: Sh
+                        command: " sudo apt update && sudo apt install rsync"
+                  - parallel:
+                      - step:
+                          type: Run
+                          name: Run Tests JavaScript Tests
+                          identifier: Run_Tests_JavaScript_Tests
                           spec:
-                            paths:
-                              - ./reports/junit
-          sharedPaths:
-            - /home/ubuntu/
+                            shell: Sh
+                            command: node ./scripts/run-ci-javascript-tests.js --maxWorkers 2
+                      - step:
+                          type: Run
+                          name: run_e2e-js
+                          identifier: run_e2ejs
+                          spec:
+                            shell: Sh
+                            command: |-
+                              node ./scripts/run-ci-e2e-tests.js --js --retries 3
+
+
+                              #   run_e2e:
+                              #     parameters:
+                              #       platform:
+                              #         description: Target platform
+                              #         type: enum
+                              #         enum: ["android", "ios", "js"]
+                              #         default: "js"
+                              #       retries:
+                              #         description: How many times the job should try to run these tests
+                              #         type: integer
+                              #         default: 3
+                              #     steps:
+                              #       - run:
+                              #           name: "Run Tests: << parameters.platform >> End-to-End Tests"
+                              #           command: node ./scripts/run-ci-e2e-tests.js --<< parameters.platform >> --retries << parameters.retries >>
+                            reports:
+                              type: JUnit
+                              spec:
+                                paths:
+                                  - ./reports/junit
+              sharedPaths:
+                - /home/ubuntu/
+            when:
+              pipelineStatus: Success
+              condition: "false"
