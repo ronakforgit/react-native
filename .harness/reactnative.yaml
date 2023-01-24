@@ -14,7 +14,6 @@ pipeline:
     - stage:
         name: test_js_prev_lts
         identifier: test_js_prev_lts
-        description: ""
         type: CI
         spec:
           cloneCodebase: true
@@ -101,3 +100,94 @@ pipeline:
                       export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_A="312d354b5c36f082cfe9"
                       export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_B="07973d757026bdd9f196"
                       export HOMEBREW_NO_AUTO_UPDATE=1
+              - step:
+                  type: Run
+                  name: setup artifact
+                  identifier: setup_artifact
+                  spec:
+                    shell: Bash
+                    command: |-
+                      #intial setup
+                      mkdir -p ./reports/{buck,build,junit,outputs}
+              - step:
+                  type: RestoreCacheGCS
+                  name: "restore yarn cache "
+                  identifier: restore_yarn_cache
+                  spec:
+                    connectorRef: ronakgcpbucket
+                    bucket: migration-artifact-comman
+                    key: v5-yarn-cache-{{ test_js_prev_lts }}-{{ arch }}-{{ checksum "yarn.lock" }}
+                    archiveFormat: Tar
+                  when:
+                    stageStatus: Success
+                    condition: "false"
+                  failureStrategies: []
+              - step:
+                  type: Run
+                  name: install yarn
+                  identifier: install_yarn
+                  spec:
+                    shell: Bash
+                    command: |2-
+                                  # Skip yarn install on metro bump commits as the package is not yet
+                                  # available on npm
+                                  if [[ $(echo "$GIT_COMMIT_DESC" | grep -c "Bump metro@") -eq 0 ]]; then
+                                    yarn install --non-interactive --cache-folder ~/.cache/yarn
+                                  fi
+              - step:
+                  type: SaveCacheGCS
+                  name: save yarn cache
+                  identifier: save_yarn_cache
+                  spec:
+                    connectorRef: ronakgcpbucket
+                    bucket: migration-artifact-comman
+                    key: v5-yarn-cache-{{ test_js_prev_lts }}-{{ arch }}-{{ checksum "yarn.lock" }}
+                    sourcePaths:
+                      - /home/ubuntu/.cache/yarn
+                    archiveFormat: Tar
+              - step:
+                  type: Run
+                  name: Install rsync
+                  identifier: Install_rsync
+                  spec:
+                    shell: Sh
+                    command: " sudo apt update && sudo apt install rsync"
+              - step:
+                  type: Run
+                  name: Run Tests JavaScript Tests
+                  identifier: Run_Tests_JavaScript_Tests
+                  spec:
+                    shell: Sh
+                    command: node ./scripts/run-ci-javascript-tests.js --maxWorkers 2
+              - step:
+                  type: Run
+                  name: run_e2e-js
+                  identifier: run_e2ejs
+                  spec:
+                    shell: Sh
+                    command: |-
+                      node ./scripts/run-ci-e2e-tests.js --js --retries 3
+
+
+                      #   run_e2e:
+                      #     parameters:
+                      #       platform:
+                      #         description: Target platform
+                      #         type: enum
+                      #         enum: ["android", "ios", "js"]
+                      #         default: "js"
+                      #       retries:
+                      #         description: How many times the job should try to run these tests
+                      #         type: integer
+                      #         default: 3
+                      #     steps:
+                      #       - run:
+                      #           name: "Run Tests: << parameters.platform >> End-to-End Tests"
+                      #           command: node ./scripts/run-ci-e2e-tests.js --<< parameters.platform >> --retries << parameters.retries >>
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - ./reports/junit
+          sharedPaths:
+            - /home/ubuntu/
