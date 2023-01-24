@@ -374,3 +374,81 @@ pipeline:
             when:
               pipelineStatus: Success
               condition: "false"
+        - stage:
+            name: test_buck
+            identifier: test_buck
+            type: CI
+            spec:
+              cloneCodebase: true
+              platform:
+                os: Linux
+                arch: Amd64
+              runtime:
+                type: Cloud
+                spec: {}
+              execution:
+                steps:
+                  - step:
+                      type: Run
+                      name: env setup
+                      identifier: env_setup
+                      spec:
+                        shell: Sh
+                        command: |-
+                          export CIRCLE_SHA1="c19548728c9be3ecc91e6fefb35bc14929109d60"
+
+                          export GIT_COMMIT_DESC="git log --format=oneline -n 1 c19548728c9be3ecc91e6fefb35bc14929109d60"
+                                # The public github tokens are publicly visible by design
+                          export PUBLIC_PULLBOT_GITHUB_TOKEN_A="a6edf8e8d40ce4e8b11a"
+                          export PUBLIC_PULLBOT_GITHUB_TOKEN_B="150e1341f4dd9c944d2a"
+                          export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_A="312d354b5c36f082cfe9"
+                          export PUBLIC_ANALYSISBOT_GITHUB_TOKEN_B="07973d757026bdd9f196"
+                          export HOMEBREW_NO_AUTO_UPDATE=1
+
+                          export KOTLIN_HOME="third-party/kotlin"
+                  - step:
+                      type: Run
+                      name: setup artifact
+                      identifier: setup_artifact
+                      spec:
+                        shell: Bash
+                        command: |-
+                          #intial setup
+                          mkdir -p ./reports/{buck,build,junit,outputs}
+                  - step:
+                      type: RestoreCacheGCS
+                      name: "restore yarn cache "
+                      identifier: restore_yarn_cache
+                      spec:
+                        connectorRef: ronakgcpbucket
+                        bucket: migration-artifact-comman
+                        key: v5-yarn-cache-test_buck-{{ arch }}-{{ checksum "yarn.lock" }}
+                        archiveFormat: Tar
+                      when:
+                        stageStatus: Success
+                      failureStrategies: []
+                  - step:
+                      type: Run
+                      name: install yarn
+                      identifier: install_yarn
+                      spec:
+                        shell: Bash
+                        command: |2-
+                                      # Skip yarn install on metro bump commits as the package is not yet
+                                      # available on npm
+                                      if [[ $(echo "$GIT_COMMIT_DESC" | grep -c "Bump metro@") -eq 0 ]]; then
+                                        yarn install --non-interactive --cache-folder ~/.cache/yarn
+                                      fi
+                  - step:
+                      type: SaveCacheGCS
+                      name: save yarn cache
+                      identifier: save_yarn_cache
+                      spec:
+                        connectorRef: ronakgcpbucket
+                        bucket: migration-artifact-comman
+                        key: v5-yarn-cache-test_buck-{{ arch }}-{{ checksum "yarn.lock" }}
+                        sourcePaths:
+                          - /home/ubuntu/.cache/yarn
+                        archiveFormat: Tar
+              sharedPaths:
+                - /home/ubuntu/.cache/yarn
