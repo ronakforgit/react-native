@@ -677,6 +677,12 @@ pipeline:
 
                           #download_gradle_dependencies
 
+                          ./gradlew buildAll
+
+
+                          GITHUB_TOKEN="$PUBLIC_ANALYSISBOT_GITHUB_TOKEN_A""$PUBLIC_ANALYSISBOT_GITHUB_TOKEN_B" scripts/circleci/report-bundle-size.sh android || true
+
+
                   - parallel:
                       - step:
                           type: SaveCacheGCS
