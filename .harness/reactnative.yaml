@@ -643,7 +643,7 @@ pipeline:
                       identifier: install_yarn
                       spec:
                         connectorRef: account.harnessImage
-                        image: reactnativecommunity/react-native-android:6.2
+                        image: reactnativecommunity/react-native-android:7.0
                         shell: Sh
                         command: |+
                           export CIRCLE_SHA1="c19548728c9be3ecc91e6fefb35bc14929109d60"
