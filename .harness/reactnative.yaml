@@ -8,7 +8,7 @@ pipeline:
     ci:
       codebase:
         connectorRef: account.gitforronak
-        repoName: ronakforgit/react-native
+        repoName: facebook/react-native
         build: <+input>
   stages:
     - parallel:
