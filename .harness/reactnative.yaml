@@ -769,3 +769,4 @@ pipeline:
                               - ./reports/junit/
               sharedPaths:
                 - /home/ubuntu/.cache/yarn
+                - /home/ubuntu/
